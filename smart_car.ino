@@ -10,8 +10,6 @@
 * - La structure du code n'a pas changée (fonctions, conditions, déclarations...).
 *
 * Améliorations possibles:
-* - Améliorer les conditions (switch au lieu de plusieurs if).
-* - Optimiser les fonctions (certains éléments sont répétitifs).
 * - Supprimer les println() qui ne sont plus nécessaires au débogage du code.
 */
 
@@ -34,14 +32,14 @@ int LedSuiveurLigne = A0;
 
 
 //*********************** Set to detect the IRcodes ****************** *******
-long IRfront = 0x00FF629D; //Forward Fleche vers avant
-long IRback = 0x00FFA857; //Reverse Fleche arriere
-long IRturnright = 0x00FFC23D; //Right touche fleche droite
-long IRturnleft = 0x00FF22DD; //Left touche fleche gauche
-long IRstop = 0x00FF02FD; //Stop touche OK
-long IRcny70 = 0x00FF42BD; //Line following Touche *
-long IRAutorun = 0x00FF52AD; //Self-propelled mode ultrasound Touche #
-long IRturnsmallleft = 0x00FF22DD;
+const long IRfront = 0x00FF629D; //Forward Fleche vers avant
+const long IRback = 0x00FFA857; //Reverse Fleche arriere
+const long IRturnright = 0x00FFC23D; //Right touche fleche droite
+const long IRturnleft = 0x00FF22DD; //Left touche fleche gauche
+const long IRstop = 0x00FF02FD; //Stop touche OK
+const long IRcny70 = 0x00FF42BD; //Line following Touche *
+const long IRAutorun = 0x00FF52AD; //Self-propelled mode ultrasound Touche #
+const long IRturnsmallleft = 0x00FF22DD;
 
 //************************* Defined CNY70 pins ******************* *****************
 const int SensorLeft = 7; //Left sensor input pin
@@ -52,7 +50,6 @@ int SM; //Middle sensor status
 int SR; //Right sensor status
 IRrecv irrecv(irReceiverPin); //Define an object to receive infrared signals IRrecv
 decode_results results; //Decoding results will result in structural variables in decode_results
-
 //************************* Defined ultrasound pins ****************** ************
 int inputPin = 13 ; //Echo pin
 int outputPin = 12; //Trig pin
@@ -66,6 +63,12 @@ int Fgo = 8; //Forward
 int Rgo = 6; //Turn right
 int Lgo = 4; //Turn left
 int Bgo = 2; //Reverse
+//************************ Servomotor **************************************************
+
+
+int servoLeftDirection = 177;
+int servoRightDirection = 5;
+int servoFrontDirection = 90;
 int servoPin = 9; // Define Pin for Ultrasound servomotor
 //************************ Setup **************************************************
 void setup()
@@ -103,7 +106,6 @@ void advance() //Go Forward
   digitalWrite(MotorLeft2,HIGH);
   digitalWrite(MotorRight1,HIGH);
   digitalWrite(MotorRight2,LOW);
-  myservo.write(90);
 }
 
 void right(int b) //Turn right
@@ -117,7 +119,6 @@ void right() //Turn right
   digitalWrite(MotorLeft2,HIGH);
   digitalWrite(MotorRight1,LOW);
   digitalWrite(MotorRight2,LOW);
-  myservo.write( 5);
 
 }
 void left(int c) //Turn left
@@ -132,7 +133,6 @@ void left() //Turn left
   digitalWrite(MotorLeft2,LOW);
   digitalWrite(MotorRight1,HIGH);
   digitalWrite(MotorRight2,LOW);
-  myservo.write( 177);
 }
 
 void turnR() //Pivot right
@@ -233,7 +233,7 @@ void detection() //Measure three angles (front, left, right)
 //*************************************************************************************
 void ask_pin_F() //Measure the distance from the front
 {
-  myservo.write(90);
+  myservo.write(servoFrontDirection);
   digitalWrite(outputPin, LOW); //Make ultrasonic transmitter low voltage 2 μs
   delayMicroseconds(2);
   digitalWrite(outputPin, HIGH); //Make ultrasonic transmitting high voltage 10 μs
@@ -249,7 +249,7 @@ void ask_pin_F() //Measure the distance from the front
 //****************************************************************************************
 void ask_pin_L() //Measure the distance from the left
 {
-  myservo.write( 177);
+  myservo.write( servoLeftDirection);
   delay( delay_time);
   digitalWrite(outputPin, LOW); //Make ultrasonic transmitter low voltage 2 μs
   delayMicroseconds( 2);
@@ -266,7 +266,7 @@ void ask_pin_L() //Measure the distance from the left
 //****************************************************************************************
 void ask_pin_R() //Measure the distance from the right
 {
-  myservo.write( 5);
+  myservo.write( servoRightDirection);
   delay( delay_time);
   digitalWrite(outputPin, LOW); //Make ultrasonic transmitter low voltage 2 μs
   delayMicroseconds( 2);
@@ -280,52 +280,9 @@ void ask_pin_R() //Measure the distance from the right
   Rspeedd = Rdistance;
 }
 
-//**************************************** LOOP ******************************************
-void loop()
+void followLine()
 {
-  SL = digitalRead(SensorLeft);
-  SM = digitalRead(SensorMiddle);
-  SR = digitalRead(SensorRight);
-  performCommand();
-
-  //***************************************************************************** Normal remote mode
-  if (irrecv.decode(&results))
-  {
-    //Decoding is successful, you receive a set of infrared signals
-    irrecv.resume(); //Continue to accept a set of infrared signals
-    Serial.println(results.value,HEX);
-    digitalWrite(LedInfraRouge,HIGH);
-    digitalWrite(LedSuiveurLigne,LOW);
-    digitalWrite(LedUltraSon,LOW);
-    if (results.value == IRfront) //Forward
-    {
-      advance(6); //Forward
-    }
-
-    if (results.value == IRback) //Reverse
-    {
-      back(6); //Reverse
-    }
-
-    if (results.value == IRturnright) //Turn right
-    {
-      right(6); //Turn right
-    }
-
-    if (results.value == IRturnleft) //Turn left
-    {
-      left(6); //Turn left
-    }
-
-    if (results.value == IRstop) //Stop
-    {
-      stop();
-    }
-
-    //**************************************************************************** Line following
-    if (results.value == IRcny70)
-    {
-      Serial.println("Line tracking mode");
+     Serial.println("Line tracking mode");
       digitalWrite(LedInfraRouge,LOW);
       digitalWrite(LedSuiveurLigne,HIGH);
       digitalWrite(LedUltraSon,LOW);
@@ -384,12 +341,11 @@ void loop()
         }
       }
       results.value=0;
-    }
+}
 
-    //********************************************************************************************* Self-propelled mode ultrasound
-    if (results.value == IRAutorun)
-    {
-      Serial.println("Ultrasound mode");
+void autorun()
+{
+  Serial.println("Ultrasound mode");
       digitalWrite(LedInfraRouge,LOW);
       digitalWrite(LedSuiveurLigne,LOW);
       digitalWrite(LedUltraSon,HIGH);
@@ -477,11 +433,69 @@ void loop()
         }
       }
       results.value=0;
-    }
-    else
+}
+//**************************************** LOOP ******************************************
+void loop()
+{
+  performCommand();
+
+  //***************************************************************************** Normal remote mode
+  if (irrecv.decode(&results))
+  {
+    digitalWrite(LedInfraRouge,LOW);
+    //Decoding is successful, you receive a set of infrared signals
+    Serial.println(results.value,HEX);
+    
+    digitalWrite(LedSuiveurLigne,LOW);
+    digitalWrite(LedUltraSon,LOW);
+    switch(results.value)
     {
+      case IRfront://Forward
+        ask_pin_F(); //Read from front
+
+        if(Fspeedd > 25) //If the distance is less than 10 cm in front
+        {
+          advance(6);
+        }
+        else
+        {
+          digitalWrite(LedInfraRouge,HIGH);
+          delay(200);
+          digitalWrite(LedInfraRouge,LOW);
+          delay(200);
+          digitalWrite(LedInfraRouge,HIGH);
+          delay(400);
+          digitalWrite(LedInfraRouge,LOW);
+        }
+        
+      break;
+      case IRback://Reverse
+        back(6); //Reverse
+      break;
+      case IRturnright:
+      right(6); //Turn right
+      break;
+      case IRturnleft:
+      left(6); //Turn left
+      break;
+      case IRstop: //Stop
       stop();
+      break;
+      case IRcny70: //Line following
+        followLine();
+        break;
+      case IRAutorun: //Self-propelled mode ultrasound
+        autorun();
+        break;
+      default:
+        stop();
+        break;
     }
+    irrecv.resume(); //Continue to accept a set of infrared signals
+  }
+  else
+  {
+    stop();
   }
 }
 
@@ -490,25 +504,25 @@ void performCommand()
   if (Serial.available())
   {
     val = Serial.read();
-  }
-  if (val == 'f') //Forwards
-  {
-    advance(10);
-  }
-  else if (val == 'b') //back
-  {
-    back(10);
-  }
-  else if (val == 'l') //right
-  {
-    turnL(10);
-  }
-  else if (val == 'r') //left
-  {
-    turnR(10);
-  }
-  else if (val == 's' ) //stop
-  {
-    stopp(10);
+    digitalWrite(LedInfraRouge,HIGH);
+    switch(val)
+    {
+      case 'f':
+        advance(10);
+        break;
+      case 'b':
+       back(10);
+       break;
+      case 'l':
+        turnL(10);
+        break;
+      case 'r':
+      turnR(10);
+      break;
+      case 's':
+      stopp(10);
+      
+    }
+
   }
 }
