@@ -17,19 +17,17 @@
 #include <Servo.h>
 
 //*********************** Definition of motor pins ********************* ****
-int MotorLeft1 = 6;
-int MotorLeft2 = 5;
-int MotorRight1 = 11;
-int MotorRight2 = 10;
+const int MotorLeft1 = 6;
+const int MotorLeft2 = 5;
+const int MotorRight1 = 11;
+const int MotorRight2 = 10;
 int counter = 0;
 const int irReceiverPin = 2; //IR receiver connected to pin 2
 char val;
-
 // ******* Led d'information ajoutéé
-int LedInfraRouge = A1;
-int LedUltraSon = 8;
-int LedSuiveurLigne = A0;
-
+const int LedInfraRouge = A1;
+const int LedUltraSon = 8;
+const int LedSuiveurLigne = A0;
 
 //*********************** Set to detect the IRcodes ****************** *******
 const long IRfront = 0x00FF629D; //Forward Fleche vers avant
@@ -50,27 +48,34 @@ int SM; //Middle sensor status
 int SR; //Right sensor status
 IRrecv irrecv(irReceiverPin); //Define an object to receive infrared signals IRrecv
 decode_results results; //Decoding results will result in structural variables in decode_results
+decode_results pendingResults; //Decoding results will result in structural variables in decode_results
 //************************* Defined ultrasound pins ****************** ************
-int inputPin = 13 ; //Echo pin
-int outputPin = 12; //Trig pin
+const int inputPin = 13 ; //Echo pin
+const int outputPin = 12; //Trig pin
 int Fspeedd = 0; //Distance in front
 int Rspeedd = 0; //Distance right
 int Lspeedd = 0; //Distance left
 int directionn = 0; //Forward = 8, Rear = 2, Left = 4, Right = 6
 Servo myservo; //Set myservo
-int delay_time = 250; //Settling time after steering servo motors
-int Fgo = 8; //Forward
-int Rgo = 6; //Turn right
-int Lgo = 4; //Turn left
-int Bgo = 2; //Reverse
+const int delay_time = 250; //Settling time after steering servo motors
+const int Fgo = 8; //Forward
+const int Rgo = 6; //Turn right
+const int Lgo = 4; //Turn left
+const int Bgo = 2; //Reverse
+
+const int near = 25;
+const int veryNear = 15;
 //************************ Servomotor **************************************************
 
 
-int servoLeftDirection = 177;
-int servoRightDirection = 5;
-int servoFrontDirection = 90;
-int servoPin = 9; // Define Pin for Ultrasound servomotor
+const int servoLeftDirection = 177;
+const int servoRightDirection = 5;
+const int servoFrontDirection = 90;
+const int servoPin = 9; // Define Pin for Ultrasound servomotor
 //************************ Setup **************************************************
+
+unsigned long endingMilli =0;
+
 void setup()
 {
   Serial.begin(9600);
@@ -100,6 +105,11 @@ void advance(int a) //Go Forward
   delay(a * 100);
 }
 
+void advanceWD(int a) //Go Forward
+{
+  advance();
+  endingMilli = millis() +a * 100;
+}
 void advance() //Go Forward
 {
   digitalWrite(MotorLeft1,LOW);
@@ -112,6 +122,12 @@ void right(int b) //Turn right
 {
   right();
   delay(b * 100);
+}
+
+void rightWD(int b) //Turn right
+{
+  right();
+  endingMilli = millis() +b * 100;
 }
 void right() //Turn right
 {
@@ -127,6 +143,11 @@ void left(int c) //Turn left
   delay(c*100);
 }
 
+void leftWD(int c) //Turn left
+{
+  left();
+  endingMilli = millis() +c * 100;
+}
 void left() //Turn left
 {
   digitalWrite(MotorLeft1,LOW);
@@ -190,18 +211,21 @@ void back(int g) //Reverse
   delay(g * 100);
 }
 
+void backWD(int g) //Reverse
+{
+  back();
+endingMilli = millis() +g * 100;
+}
 void detection() //Measure three angles (front, left, right)
 {
-  int delay_time = 250; //Settling time after steering servo motors
   ask_pin_F(); //Read from front
 
-  if(Fspeedd < 10) //If the distance is less than 10 cm in front
+  if(Fspeedd < veryNear) //If the distance is less than 10 cm in front
   {
     stopp(1); //Stop
     back(2); //Reverse 0.2 seconds
   }
-
-  if(Fspeedd < 25) //If the distance is less than 25 cm in front
+  if(Fspeedd < near) //If the distance is less than 25 cm in front
   {
     stopp(1); //Stop
     ask_pin_L(); //Read from left
@@ -219,7 +243,7 @@ void detection() //Measure three angles (front, left, right)
       directionn = Rgo; //Go right
     }
 
-    if (Lspeedd < 15 && Rspeedd < 15) //If the distance to the left and right are less than 15 cm
+    if (Lspeedd < veryNear && Rspeedd < veryNear) //If the distance to the left and right are less than 15 cm
     {
       directionn = Bgo; //Reverse
     }
@@ -351,76 +375,30 @@ void autorun()
       digitalWrite(LedUltraSon,HIGH);
       while(1)
       {
-        myservo.write(90); //Put servo in middle position (pointing to the front of the robot)
+        myservo.write(servoFrontDirection); //Put servo in middle position (pointing to the front of the robot)
         detection(); //Measure the distance in each direction
-        if(directionn == 8) //Forward
+        switch(directionn)
         {
-          if (irrecv.decode(&results))
-          {
-            irrecv.resume();
-            Serial.println(results.value,HEX);
-            if( results.value == IRstop)
-            {
-              stop();
-              break;
-            }
-          }
-          results.value=0;
-          advance(1); //Go forward
-          Serial.println("Forward");
+          case Fgo:
+            advance(1); //Go forward
+            Serial.println("Forward");
+          break;
+          case Bgo:
+            back(8); //Reverse
+            turnL(3); //Move slightly to the left
+            Serial.println("Reverse");
+          break;
+          case Rgo:
+            back(1);
+            turnR(6); //Turn right
+            Serial.print("Right");
+          break;
+          case Lgo:
+            back( 1);
+            turnL(6); //Turn left
+            Serial.print("Left");
+          break;
         }
-        if(directionn == 2) //Reverse
-        {
-          if (irrecv.decode(&results))
-          {
-            irrecv.resume();
-            Serial.println(results.value,HEX);
-            if( results.value == IRstop)
-            {
-              stop();
-              break;
-            }
-          }
-          results.value=0;
-          back(8); //Reverse
-          turnL(3); //Move slightly to the left
-          Serial.println("Reverse");
-        }
-        if(directionn == 6) //Turn right
-        {
-          if (irrecv.decode(&results))
-          {
-            irrecv.resume();
-            Serial.println(results.value,HEX);
-            if(results.value == IRstop)
-            {
-              stop();
-              break;
-            }
-          }
-          results.value=0;
-          back(1);
-          turnR(6); //Turn right
-          Serial.print("Right");
-        }
-        if(directionn == 4) //Turn left
-        {
-          if (irrecv.decode(&results))
-          {
-            irrecv.resume();
-            Serial.println(results.value,HEX);
-            if( results.value == IRstop)
-            {
-              stop();
-              break;
-            }
-          }
-          results.value=0;
-          back( 1);
-          turnL(6); //Turn left
-          Serial.print("Left");
-        }
-
         if (irrecv.decode(&results))
         {
           irrecv.resume();
@@ -431,52 +409,51 @@ void autorun()
             break;
           }
         }
+        results.value=0;
       }
-      results.value=0;
+
 }
 //**************************************** LOOP ******************************************
 void loop()
 {
   performCommand();
-
-  //***************************************************************************** Normal remote mode
-  if (irrecv.decode(&results))
+  if (endingMilli < millis())
   {
+    stop();
+  }
+  //***************************************************************************** Normal remote mode
+  if (irrecv.decode(&pendingResults))
+  {
+    results=pendingResults;
+    irrecv.resume(); //Continue to accept a set of infrared signals
     digitalWrite(LedInfraRouge,LOW);
     //Decoding is successful, you receive a set of infrared signals
-    Serial.println(results.value,HEX);
-    
     digitalWrite(LedSuiveurLigne,LOW);
     digitalWrite(LedUltraSon,LOW);
     switch(results.value)
     {
       case IRfront://Forward
-        ask_pin_F(); //Read from front
-
-        if(Fspeedd > 25) //If the distance is less than 10 cm in front
+              ask_pin_F();
+        if(Fspeedd < 25) //If the distance is less than 10 cm in front
         {
-          advance(6);
+          stop();
         }
         else
         {
-          digitalWrite(LedInfraRouge,HIGH);
-          delay(200);
-          digitalWrite(LedInfraRouge,LOW);
-          delay(200);
-          digitalWrite(LedInfraRouge,HIGH);
-          delay(400);
-          digitalWrite(LedInfraRouge,LOW);
+        advanceWD(6);
         }
-        
       break;
       case IRback://Reverse
-        back(6); //Reverse
+        backWD(6); //Reverse
+
       break;
       case IRturnright:
-      right(6); //Turn right
+      rightWD(6); //Turn right
+  
       break;
       case IRturnleft:
-      left(6); //Turn left
+      leftWD(6); //Turn left
+ 
       break;
       case IRstop: //Stop
       stop();
@@ -487,17 +464,11 @@ void loop()
       case IRAutorun: //Self-propelled mode ultrasound
         autorun();
         break;
-      default:
-        stop();
-        break;
     }
-    irrecv.resume(); //Continue to accept a set of infrared signals
   }
-  else
-  {
-    stop();
-  }
+
 }
+
 
 void performCommand()
 {
