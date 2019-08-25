@@ -12,9 +12,13 @@
 * Améliorations possibles:
 * - Supprimer les println() qui ne sont plus nécessaires au débogage du code.
 */
-
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
 #include <IRremote.h>
 #include <Servo.h>
+
+// ******************************************** LCD screen   ****************
+LiquidCrystal_I2C lcd(0x27,16,2); 
 
 //*********************** Definition of motor pins ********************* ****
 const int MotorLeft1 = 6;
@@ -48,7 +52,6 @@ int SM; //Middle sensor status
 int SR; //Right sensor status
 IRrecv irrecv(irReceiverPin); //Define an object to receive infrared signals IRrecv
 decode_results results; //Decoding results will result in structural variables in decode_results
-decode_results pendingResults; //Decoding results will result in structural variables in decode_results
 //************************* Defined ultrasound pins ****************** ************
 const int inputPin = 13 ; //Echo pin
 const int outputPin = 12; //Trig pin
@@ -94,6 +97,8 @@ void setup()
 
   // LED d'information
   pinMode(ledWarning, OUTPUT);
+  lcd.init();
+  lcd.backlight();   
 }
 
 //************************************ (Void)*************************************
@@ -304,7 +309,8 @@ void ask_pin_R() //Measure the distance from the right
 
 void followLine()
 {
-     Serial.println("Line tracking mode");
+    lcd.clear();
+    lcd.print("Line tracking mode");
 
       while(1)
       {
@@ -356,6 +362,8 @@ void followLine()
           if( results.value == IRstop)
           {
             stop();
+            lcd.clear();
+            lcd.print("Remote Mode !");
             break;
           }
         }
@@ -365,7 +373,8 @@ void followLine()
 
 void autorun()
 {
-  Serial.println("Ultrasound mode");
+  lcd.clear();
+  lcd.print("Ultrasound mode");
       while(1)
       {
         myservo.write(servoFrontDirection); //Put servo in middle position (pointing to the front of the robot)
@@ -399,6 +408,8 @@ void autorun()
           if( results.value == IRstop)
           {
             stop();
+            lcd.clear();
+            lcd.print("Remote Mode !");
             break;
           }
         }
@@ -415,11 +426,11 @@ void loop()
     stop();
   }
   //***************************************************************************** Normal remote mode
-  if (irrecv.decode(&pendingResults))
-  {
-    results=pendingResults;
-    irrecv.resume(); //Continue to accept a set of infrared signals
-    //Decoding is successful, you receive a set of infrared signals
+  if (irrecv.decode(&results))
+  { //Decoding is successful, you receive a set of infrared signals
+    lcd.clear();
+    lcd.print(results.value,HEX);
+   
     
     switch(results.value)
     {
@@ -428,7 +439,7 @@ void loop()
         if(Fspeedd < 25) //If the distance is less than 10 cm in front
         {
           stop();
-          showWarning();
+          showWarning("Obstacle !");
         }
         else
         {
@@ -457,18 +468,17 @@ void loop()
         autorun();
         break;
     }
+   irrecv.resume(); //Continue to accept a set of infrared signals
   }
 
 }
 
-    void showWarning()
+    void showWarning(String message)
   {
     digitalWrite(ledWarning,HIGH);
-    delay(400);
-    digitalWrite(ledWarning,LOW);
-    delay(200);
-    digitalWrite(ledWarning,HIGH);
-    delay(400);
+    lcd.clear();
+    lcd.print(message);
+    delay(1000);
     digitalWrite(ledWarning,LOW);
   }
 
@@ -477,6 +487,11 @@ void performCommand()
   if (Serial.available())
   {
     val = Serial.read();
+    lcd.clear();
+    lcd.print("Bluetooth");
+    lcd.setCursor(0,1);
+    lcd.print("Valeur: ");
+    lcd.print(val);
     switch(val)
     {
       case 'f':
