@@ -81,6 +81,7 @@ unsigned long endingMilli =0;
 
 void setup()
 {
+  lcd.init(); 
   Serial.begin(9600);
   pinMode(MotorRight1, OUTPUT); //Pin 5 (PWM)
   pinMode(MotorRight2, OUTPUT); //Pin 6 (PWM)
@@ -94,11 +95,10 @@ void setup()
   pinMode(inputPin, INPUT); //Define ultrasound echo pin
   pinMode(outputPin, OUTPUT); //Define ultrasonic trig pin
   myservo.attach(servoPin); //Define servo motor output pin (PWM)
-
+  lcd.backlight();  
   // LED d'information
   pinMode(ledWarning, OUTPUT);
-  lcd.init();
-  lcd.backlight();   
+
 }
 
 //************************************ (Void)*************************************
@@ -173,12 +173,22 @@ void turnR(int d) //Pivot right
   delay(d * 100);
 }
 
+void turnRWD(int d) //Pivot right
+{
+  turnR();
+  endingMilli = millis() +d * 100;
+}
 void turnL(int e) //Pivot left
 {
   turnL();
   delay(e * 100);
 }
 
+void turnLWD(int e) //Pivot left
+{
+  turnL();
+  endingMilli = millis() +e * 100;
+}
 void turnL() //Pivot left
 {
   digitalWrite(MotorLeft1,HIGH);
@@ -426,7 +436,7 @@ void loop()
     stop();
   }
   //***************************************************************************** Normal remote mode
-  if (irrecv.decode(&results))
+  if (irrecv.decode(&results) && results.value != 0)
   { //Decoding is successful, you receive a set of infrared signals
     lcd.clear();
     lcd.print(results.value,HEX);
@@ -501,10 +511,10 @@ void performCommand()
        backWD(10);
        break;
       case 'l':
-        turnL(10);
+        turnLWD(5);
         break;
       case 'r':
-      turnR(10);
+      turnRWD(5);
       break;
       case 's':
       stop();
