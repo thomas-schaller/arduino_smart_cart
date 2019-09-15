@@ -33,8 +33,9 @@ Il faut appuyer sur "OK" de la télécommande pour revenir en mode manuel.
 Le code a été originalement trouvé sur le site http://www.Banggood.com et adapté par https://www.TD72PRO.com.
 J'ai repris le code de ce dernier ou j'ai factorisé les fonctions de contrôle des moteurs qui se répétaient.
 
-## Ajout au code d'origine
+## Ajout de fonctionnalités au code d'origine
 
 J'ai apporté des modifications mineurs au code :
-*  J'ai ajouté trois leds permettant d'afficher le mode dans lequel se trouve le robot (manuel, suiveur de ligne ou ultrason).
-* J'ai fait tourné le servo moteur dans la direction demandé par l'utilisateur en infrarouge. La tête tourne à droite si l'utilisateur tourne à droite, à gauche si il tourne à gauche et droit devant si il avance.
+* J'ai ajouté un ecran lcd 2 ligne qui permet d'afficher du texte. Il est utilisé actuellement pour afficher le mode courant et les touches de la télécommande infrarouge.
+* En mode infrarouge, le robot teste la distance avant d'avancer tout droit. Dans ce cas, un message d'avertissement indique la présence d'un obstacle.
+* J'ai ajouté une led d'avertissement qui s'allume lorsqu'un message d'avertissement s'affiche.
