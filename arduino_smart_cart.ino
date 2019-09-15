@@ -436,7 +436,7 @@ void loop()
     stop();
   }
   //***************************************************************************** Normal remote mode
-  if (irrecv.decode(&results) && results.value != 0)
+  if (irrecv.decode(&results) && results.value != 0xFFFFFFFF)
   { //Decoding is successful, you receive a set of infrared signals
     lcd.clear();
     lcd.print(results.value,HEX);
