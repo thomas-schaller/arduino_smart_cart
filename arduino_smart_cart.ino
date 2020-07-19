@@ -21,12 +21,14 @@
 LiquidCrystal_I2C lcd(0x27,16,2); 
 
 //*********************** Definition of motor pins ********************* ****
+//IN1 = pin 5 de l’Arduino
+//IN2 = pin 6 de l’Arduino
+//IN3 = pin 10 de l’Arduino
+//IN4 = pin 11 de l’Arduino
 const int MotorLeft1 = 6;
 const int MotorLeft2 = 5;
 const int MotorRight1 = 11;
 const int MotorRight2 = 10;
-int counter = 0;
-const int irReceiverPin = 2; //IR receiver connected to pin 2
 char val;
 
 // ******* Led d'information ajoutéé
@@ -50,8 +52,12 @@ const int SensorRight = 3; //Right sensor input pin
 int SL; //Left sensor status
 int SM; //Middle sensor status
 int SR; //Right sensor status
+
+// *********************** IR Receiver   *******************************************
+const int irReceiverPin = 2; //IR receiver connected to pin 2
 IRrecv irrecv(irReceiverPin); //Define an object to receive infrared signals IRrecv
 decode_results results; //Decoding results will result in structural variables in decode_results
+
 //************************* Defined ultrasound pins ****************** ************
 const int inputPin = 13 ; //Echo pin
 const int outputPin = 12; //Trig pin
@@ -68,8 +74,8 @@ const int Bgo = 2; //Reverse
 
 const int near = 25;
 const int veryNear = 15;
-//************************ Servomotor **************************************************
 
+//************************ Ultrasound Servomotor **************************************************
 
 const int servoLeftDirection = 177;
 const int servoRightDirection = 5;
@@ -491,6 +497,24 @@ void loop()
     delay(1000);
     digitalWrite(ledWarning,LOW);
   }
+
+void motorTest(int t)
+{
+    advance(t);
+  stopp(t);
+  back(t);
+  stopp(t);
+  turnL();
+  delay(t * 100);
+  stopp(t);
+  turnR();
+  delay(t * 100);
+  stopp(t);
+   left(t);
+  stopp(t);
+ right(t);
+  stopp(t);
+}
 
 void performCommand()
 {
